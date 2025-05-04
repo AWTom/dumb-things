@@ -3,17 +3,377 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Hello, World!</title>
+		<title>AI App Builder</title>
+		<style>
+			:root {
+				--primary-color: #6366f1;
+				--secondary-color: #4f46e5;
+				--bg-color: #f8fafc;
+				--text-color: #1e293b;
+				--border-color: #e2e8f0;
+				--accent-color: #c7d2fe;
+			}
+
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			body {
+				font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+				background-color: var(--bg-color);
+				color: var(--text-color);
+				line-height: 1.6;
+				padding: 2rem;
+				max-width: 900px;
+				margin: 0 auto;
+			}
+
+			.header {
+				text-align: center;
+				margin-bottom: 2rem;
+			}
+
+			h1 {
+				font-size: 2.5rem;
+				margin-bottom: 0.5rem;
+				color: var(--primary-color);
+			}
+
+			.subtitle {
+				font-size: 1.2rem;
+				color: #64748b;
+				margin-bottom: 2rem;
+			}
+
+			.chat-container {
+				background-color: white;
+				border-radius: 12px;
+				box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+				overflow: hidden;
+				margin-bottom: 2rem;
+			}
+
+			.chat-input {
+				display: flex;
+				padding: 1rem;
+				border-top: 1px solid var(--border-color);
+			}
+
+			#prompt-input {
+				flex: 1;
+				padding: 0.75rem 1rem;
+				border: 1px solid var(--border-color);
+				border-radius: 8px;
+				font-size: 1rem;
+				outline: none;
+				transition: border 0.2s;
+			}
+
+			#prompt-input:focus {
+				border-color: var(--primary-color);
+			}
+
+			#send-button {
+				background-color: var(--primary-color);
+				color: white;
+				border: none;
+				border-radius: 8px;
+				padding: 0.75rem 1.5rem;
+				margin-left: 0.75rem;
+				font-weight: 600;
+				cursor: pointer;
+				transition: background-color 0.2s;
+			}
+
+			#send-button:hover {
+				background-color: var(--secondary-color);
+			}
+
+			#send-button:disabled {
+				background-color: #a5b4fc;
+				cursor: not-allowed;
+			}
+
+			.chat-messages {
+				padding: 1.5rem;
+				min-height: 300px;
+				max-height: 500px;
+				overflow-y: auto;
+			}
+
+			.message {
+				margin-bottom: 1.5rem;
+				animation: fadeIn 0.3s ease-in-out;
+			}
+
+			.user-message {
+				background-color: #f1f5f9;
+				padding: 1rem;
+				border-radius: 12px;
+				max-width: 80%;
+				margin-left: auto;
+			}
+
+			.assistant-message {
+				background-color: var(--accent-color);
+				padding: 1rem;
+				border-radius: 12px;
+				max-width: 80%;
+			}
+
+			.loading-steps {
+				margin-top: 1.5rem;
+			}
+
+			.loading-step {
+				display: flex;
+				align-items: center;
+				margin-bottom: 0.5rem;
+				opacity: 0.5;
+				transition: opacity 0.3s ease;
+			}
+
+			.loading-step.active {
+				opacity: 1;
+			}
+
+			.step-indicator {
+				width: 20px;
+				height: 20px;
+				border-radius: 50%;
+				background-color: var(--primary-color);
+				margin-right: 0.75rem;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+			}
+
+			.step-indicator::before {
+				content: '✓';
+				color: white;
+				font-size: 0.75rem;
+			}
+
+			.step-indicator.spinner {
+				position: relative;
+				background-color: transparent;
+				border: 2px solid var(--border-color);
+				border-top-color: var(--primary-color);
+				animation: spin 1s linear infinite;
+			}
+
+			.step-indicator.spinner::before {
+				content: '';
+			}
+
+			.assistant-response {
+				margin-top: 1.5rem;
+				white-space: pre-wrap;
+			}
+
+			@keyframes fadeIn {
+				from { opacity: 0; transform: translateY(10px); }
+				to { opacity: 1; transform: translateY(0); }
+			}
+
+			@keyframes spin {
+				to { transform: rotate(360deg); }
+			}
+
+			@media (max-width: 768px) {
+				body {
+					padding: 1rem;
+				}
+
+				h1 {
+					font-size: 2rem;
+				}
+
+				.user-message, .assistant-message {
+					max-width: 90%;
+				}
+			}
+		</style>
 	</head>
 	<body>
-		<h1 id="heading"></h1>
+		<div class="header">
+			<h1>AI App Builder</h1>
+			<p class="subtitle">Tell me what app you want to build, and I'll help make it happen!</p>
+		</div>
+
+		<div class="chat-container">
+			<div class="chat-messages" id="chat-messages">
+				<!-- Messages will be added here -->
+			</div>
+			<div class="chat-input">
+				<input type="text" id="prompt-input" placeholder="Describe the app you want to build..." />
+				<button id="send-button">Send</button>
+			</div>
+		</div>
+
 		<script>
+			// Initial heading update (compatibility with original code)
 			fetch('/message')
 				.then((resp) => resp.text())
 				.then((text) => {
-					const h1 = document.getElementById('heading');
-					h1.textContent = text;
+					document.title = text;
 				});
+
+			// Chat functionality
+			const messagesContainer = document.getElementById('chat-messages');
+			const promptInput = document.getElementById('prompt-input');
+			const sendButton = document.getElementById('send-button');
+
+			function addUserMessage(prompt) {
+				const messageDiv = document.createElement('div');
+				messageDiv.className = 'message';
+				messageDiv.innerHTML = `<div class="user-message">${escapeHtml(prompt)}</div>`;
+				messagesContainer.appendChild(messageDiv);
+				messagesContainer.scrollTop = messagesContainer.scrollHeight;
+			}
+
+			function addAssistantMessage(buildingSteps, response) {
+				const messageDiv = document.createElement('div');
+				messageDiv.className = 'message';
+				
+				let stepsHtml = '<div class="loading-steps">';
+				buildingSteps.forEach((step, index) => {
+					stepsHtml += `<div class="loading-step" id="step-${index}">
+						<div class="step-indicator" id="indicator-${index}"></div>
+						<div>${step}</div>
+					</div>`;
+				});
+				stepsHtml += '</div>';
+				
+				messageDiv.innerHTML = `<div class="assistant-message">
+					${stepsHtml}
+					<div class="assistant-response" id="assistant-response" style="display: none;"></div>
+				</div>`;
+				
+				messagesContainer.appendChild(messageDiv);
+				messagesContainer.scrollTop = messagesContainer.scrollHeight;
+				
+				// Animate the steps
+				animateSteps(buildingSteps, response);
+			}
+
+			function animateSteps(steps, response) {
+				let currentStep = 0;
+				const stepDelay = 1000; // ms between steps
+				
+				function activateStep(index) {
+					const stepElement = document.getElementById(`step-${index}`);
+					const indicatorElement = document.getElementById(`indicator-${index}`);
+					
+					if (index > 0) {
+						// Mark previous step as completed
+						const prevIndicator = document.getElementById(`indicator-${index - 1}`);
+						prevIndicator.classList.remove('spinner');
+					}
+					
+					// Activate current step
+					stepElement.classList.add('active');
+					indicatorElement.classList.add('spinner');
+					
+					// If it's the last step, show the response after a delay
+					if (index === steps.length - 1) {
+						setTimeout(() => {
+							indicatorElement.classList.remove('spinner');
+							
+							// Show the response
+							const responseElement = document.getElementById('assistant-response');
+							responseElement.textContent = response;
+							responseElement.style.display = 'block';
+							messagesContainer.scrollTop = messagesContainer.scrollHeight;
+							
+							// Re-enable the input and button
+							promptInput.disabled = false;
+							sendButton.disabled = false;
+							promptInput.focus();
+						}, stepDelay);
+					} else {
+						// Move to next step
+						setTimeout(() => activateStep(index + 1), stepDelay);
+					}
+				}
+				
+				// Start the animation
+				activateStep(0);
+			}
+
+			function escapeHtml(unsafe) {
+				return unsafe
+					.replace(/&/g, "&amp;")
+					.replace(/</g, "&lt;")
+					.replace(/>/g, "&gt;")
+					.replace(/"/g, "&quot;")
+					.replace(/'/g, "&#039;");
+			}
+
+			async function sendMessage(prompt) {
+				try {
+					promptInput.disabled = true;
+					sendButton.disabled = true;
+					
+					addUserMessage(prompt);
+					
+					const response = await fetch('/api/chat', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({ prompt })
+					});
+					
+					if (!response.ok) {
+						throw new Error(`HTTP error! status: ${response.status}`);
+					}
+					
+					const data = await response.json();
+					addAssistantMessage(data.buildingSteps, data.response);
+					
+				} catch (error) {
+					console.error('Error sending message:', error);
+					
+					// Re-enable the input and button in case of error
+					promptInput.disabled = false;
+					sendButton.disabled = false;
+					
+					// Add an error message
+					const messageDiv = document.createElement('div');
+					messageDiv.className = 'message';
+					messageDiv.innerHTML = `<div class="assistant-message">
+						<div style="color: #ef4444;">Sorry, something went wrong. Please try again.</div>
+					</div>`;
+					messagesContainer.appendChild(messageDiv);
+				}
+			}
+
+			// Event listeners
+			sendButton.addEventListener('click', () => {
+				const prompt = promptInput.value.trim();
+				if (prompt) {
+					sendMessage(prompt);
+					promptInput.value = '';
+				}
+			});
+
+			promptInput.addEventListener('keypress', (e) => {
+				if (e.key === 'Enter') {
+					const prompt = promptInput.value.trim();
+					if (prompt) {
+						sendMessage(prompt);
+						promptInput.value = '';
+					}
+				}
+			});
+
+			// Set focus to the input field when the page loads
+			window.addEventListener('load', () => {
+				promptInput.focus();
+			});
 		</script>
 	</body>
 </html>
